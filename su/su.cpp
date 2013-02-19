@@ -1,13 +1,15 @@
 //------------------------------------------------------------------------------
-// Su v1.1 [19.02.2013]
+// Su v1.2 [19.02.2013]
 // Copyright 2013 Evgeny Vrublevsky <veg@tut.by>
 //------------------------------------------------------------------------------
 #include <windows.h>
 
 #define APP_TITLE L"SU"
+#define WinApiAssert(ops) if (!(ops)) DieBox();
 
-void ErrorBox(DWORD code)
+void DieBox()
 {
+	DWORD code = GetLastError();
 	LPTSTR msg = NULL;
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL);
 	if (msg != NULL)
@@ -19,6 +21,18 @@ void ErrorBox(DWORD code)
 	{
 		MessageBox(GetForegroundWindow(), L"Unknown error", APP_TITLE, MB_ICONERROR);
 	}
+	ExitProcess(code);
+}
+
+bool IsElevated()
+{
+	HANDLE token = NULL;
+	TOKEN_ELEVATION info;
+	DWORD outsize = 0;
+	WinApiAssert(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token));
+	WinApiAssert(GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize));
+	CloseHandle(token);
+	return info.TokenIsElevated;
 }
 
 int Main()
@@ -37,7 +51,27 @@ int Main()
 	}
 	while (*cmdln == ' ') cmdln++;
 
-	if (*cmdln != '@')
+	if (*cmdln == '@')
+	{
+		// Read current directory from command line
+		WCHAR currdir[MAX_PATH];
+		dst = currdir;
+		cmdln++;
+		quote = false;
+		while (*cmdln)
+		{
+			if (*cmdln == '"') quote = !quote;
+			if (!quote && *cmdln == ' ') break;
+			if (*cmdln != '"') *(dst++) = *(cmdln);
+			cmdln++;
+		}
+		*dst = NULL;
+		while (*cmdln == ' ') cmdln++;
+
+		WinApiAssert(SetCurrentDirectory(currdir));
+	}
+
+	if (!IsElevated())
 	{
 		// Prepare new command line
 		WCHAR args[4096] = {'@', '"'};
@@ -63,28 +97,13 @@ int Main()
 		if (!ShellExecuteEx(&ei))
 		{
 			DWORD code = GetLastError();
-			if (code != ERROR_CANCELLED) ErrorBox(code);
+			if (code != ERROR_CANCELLED) DieBox();
 			return code;
 		}
 		return 0;
 	}
 	else
 	{
-		// Read current directory
-		WCHAR currdir[MAX_PATH];
-		dst = currdir;
-		cmdln++;
-		quote = false;
-		while (*cmdln)
-		{
-			if (*cmdln == '"') quote = !quote;
-			if (!quote && *cmdln == ' ') break;
-			if (*cmdln != '"') *(dst++) = *(cmdln);
-			cmdln++;
-		}
-		*dst = NULL;
-		while (*cmdln == ' ') cmdln++;
-
 		// Start the destination process
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -98,12 +117,7 @@ int Main()
 		si.lpTitle = cmdln;
 
 		// Start the child process.
-		if(!CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, currdir, &si, &pi))
-		{
-			DWORD code = GetLastError();
-			ErrorBox(code);
-			return code;
-		}
+		WinApiAssert(CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi));
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 		return 0;
