@@ -1,0 +1,4 @@
+regexp:^su/build/
+regexp:^work/
+regexp:\.(aps|suo|user)$
+regexp:~$
