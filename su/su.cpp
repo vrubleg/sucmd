@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Su v1.2 [19.02.2013]
+// SU v1.2 [2013/02/19]
 // Copyright 2013 Evgeny Vrublevsky <veg@tut.by>
 //------------------------------------------------------------------------------
 #include <windows.h>
@@ -32,7 +32,7 @@ bool IsElevated()
 	WinApiAssert(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token));
 	WinApiAssert(GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize));
 	CloseHandle(token);
-	return info.TokenIsElevated;
+	return info.TokenIsElevated != 0;
 }
 
 int Main()
@@ -124,7 +124,7 @@ int Main()
 	}
 }
 
-void __cdecl Start()
+void Start()
 {
 	ExitProcess(Main());
 }
