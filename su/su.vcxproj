@@ -70,7 +70,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EntryPointSymbol>Start</EntryPointSymbol>
-      <AdditionalDependencies>msvcrt32.lib;msvcrt32_winxp.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>msvcrt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -93,7 +94,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EntryPointSymbol>Start</EntryPointSymbol>
-      <AdditionalDependencies>msvcrt64.lib;msvcrt64_win2003.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>msvcrt64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

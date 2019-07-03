@@ -1,7 +1,10 @@
 //------------------------------------------------------------------------------
-// SU v1.2 [2013/02/19]
-// Copyright 2013 Evgeny Vrublevsky <veg@tut.by>
+// SU v1.2.1 [2019/07/03]
+// Copyright 2013-2019 Evgeny Vrublevsky <veg@tut.by>
 //------------------------------------------------------------------------------
+
+#define WINVER 0x0600
+#define _WIN32_WINNT WINVER
 #include <windows.h>
 
 #define APP_TITLE L"SU"
