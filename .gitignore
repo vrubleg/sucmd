@@ -1,0 +1,7 @@
+**~**
+.vs/**
+su/build/**
+work/**
+*.aps
+*.suo
+*.user
