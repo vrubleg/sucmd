@@ -8,3 +8,8 @@ indent_size = 4
 trim_trailing_whitespace = true
 insert_final_newline = true
 guidelines = 80, 120
+
+[*.{vcxproj,vcxitems,filters,user,props,targets}]
+insert_final_newline = unset
+indent_style = space
+indent_size = 2

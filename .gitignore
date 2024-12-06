@@ -1,7 +1,5 @@
 **~**
-.vs/**
-su/build/**
-work/**
+/.vs/
+/build/
 *.aps
-*.suo
-*.user
+*.vcxproj.user
