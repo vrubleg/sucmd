@@ -30,14 +30,11 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared">
+    <Import Project="..\common\common.vcxitems" Label="Shared" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <IntDir>$(SolutionDir)build\$(ProjectName.ToLower())_$(PlatformShortName.ToLower())_$(Configuration.ToLower())\</IntDir>
-    <OutDir>$(SolutionDir)bin\</OutDir>
-    <LinkIncremental>false</LinkIncremental>
-    <GenerateManifest>false</GenerateManifest>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetName>$(ProjectName)32</TargetName>
   </PropertyGroup>
@@ -49,39 +46,21 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MinSpace</Optimization>
-      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalOptions>/Zc:alignedNew- /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
       <EntryPointSymbol>Start</EntryPointSymbol>
-      <AdditionalOptions>/EMITTOOLVERSIONINFO:NO /NOVCFEATURE /NOCOFFGRPINFO /STUB:emptystub.bin /MERGE:.pdata=.rdata %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="intrin.cpp">
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-    </ClCompile>
     <ClCompile Include="su.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="su.rc.h" />
-    <ClInclude Include="defer.hpp" />
-    <ClInclude Include="windows.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="su.rc" />
