@@ -6,22 +6,6 @@
 #include "windows.hpp"
 #include "defer.hpp"
 
-DWORD ShowLastError()
-{
-	DWORD code = GetLastError();
-	if (code != ERROR_CANCELLED)
-	{
-		LPTSTR msg = NULL;
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL
-		);
-		MessageBox(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
-		if (msg) { LocalFree(msg); }
-	}
-	return code;
-}
-
 __forceinline int Main()
 {
 	WCHAR* cmdln = GetCommandLine();
@@ -50,14 +34,14 @@ __forceinline int Main()
 		{
 			if (*cmdln == '"') { quote = !quote; }
 			else if (!quote && *cmdln == ' ') { break; }
-			else if (dst >= end) { SetLastError(ERROR_BUFFER_OVERFLOW); return ShowLastError(); }
+			else if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
 		*dst = NULL;
 		while (*cmdln == ' ') { cmdln++; }
 
-		if (!SetCurrentDirectory(currdir)) { return ShowLastError(); }
+		if (!SetCurrentDirectory(currdir)) { return GetLastError(); }
 	}
 
 	// Check if SU is elevated.
@@ -68,9 +52,9 @@ __forceinline int Main()
 		HANDLE token = NULL;
 		TOKEN_ELEVATION info = {};
 		DWORD outsize = 0;
-		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) { return ShowLastError(); }
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) { return GetLastError(); }
 		defer [&] { CloseHandle(token); };
-		if (!GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize)) { return ShowLastError(); }
+		if (!GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize)) { return GetLastError(); }
 		is_elevated = (bool) info.TokenIsElevated;
 	}
 
@@ -87,7 +71,7 @@ __forceinline int Main()
 		WCHAR* src = cmdln;
 		while (*src)
 		{
-			if (dst >= end) { SetLastError(ERROR_BUFFER_OVERFLOW); return ShowLastError(); }
+			if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 			*(dst++) = *(src++);
 		}
 		*dst = NULL;
@@ -100,7 +84,7 @@ __forceinline int Main()
 		ei.lpVerb = L"runas";
 		ei.lpParameters = args;
 
-		if (!ShellExecuteEx(&ei)) { return ShowLastError(); }
+		if (!ShellExecuteEx(&ei)) { return GetLastError(); }
 	}
 	else
 	{
@@ -114,7 +98,7 @@ __forceinline int Main()
 		if (!*cmdln) { cmdln = defcmd; }
 		si.lpTitle = cmdln;
 
-		if (!CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return ShowLastError(); }
+		if (!CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 	}
@@ -124,5 +108,18 @@ __forceinline int Main()
 
 void Start()
 {
-	ExitProcess(Main());
+	DWORD error_code = Main();
+
+	if (error_code && error_code != ERROR_CANCELLED)
+	{
+		LPTSTR msg = NULL;
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL
+		);
+		MessageBox(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
+		if (msg) { LocalFree(msg); }
+	}
+
+	ExitProcess(error_code);
 }
