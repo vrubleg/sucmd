@@ -57,7 +57,8 @@
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -65,6 +66,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalOptions>/Gs16384 /Zc:alignedNew- /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -72,16 +74,16 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EntryPointSymbol>Start</EntryPointSymbol>
-      <AdditionalDependencies>msvcrt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/EMITTOOLVERSIONINFO:NO /NOVCFEATURE /NOCOFFGRPINFO /STUB:emptystub.bin /MERGE:.pdata=.rdata %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -89,6 +91,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalOptions>/Gs16384 /Zc:alignedNew- /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -96,12 +99,14 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EntryPointSymbol>Start</EntryPointSymbol>
-      <AdditionalDependencies>msvcrt64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/EMITTOOLVERSIONINFO:NO /NOVCFEATURE /NOCOFFGRPINFO /STUB:emptystub.bin /MERGE:.pdata=.rdata %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="intrin.cpp">
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
     <ClCompile Include="su.cpp" />
   </ItemGroup>
   <ItemGroup>
