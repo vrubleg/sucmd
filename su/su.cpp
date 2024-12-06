@@ -1,50 +1,33 @@
-//------------------------------------------------------------------------------
-// SU v1.2.1 [2019/07/03]
-// Copyright 2013-2019 Evgeny Vrublevsky <veg@tut.by>
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+// Super User v1.2.2 [2024/XX/XX]
+// (C) 2013-2024 Evgeny Vrublevsky <me@veg.by>
+//----------------------------------------------------------------------------------------------------------------------
 
-#define WINVER 0x0600
-#define _WIN32_WINNT WINVER
-#include <windows.h>
+#include "windows.hpp"
+#include "defer.hpp"
 
-#define APP_TITLE L"SU"
-#define WinApiAssert(ops) if (!(ops)) DieBox();
-
-void DieBox()
+DWORD ShowLastError()
 {
 	DWORD code = GetLastError();
-	LPTSTR msg = NULL;
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL);
-	if (msg != NULL)
+	if (code != ERROR_CANCELLED)
 	{
-		MessageBox(GetForegroundWindow(), msg, APP_TITLE, MB_ICONERROR);
-		LocalFree(msg);
+		LPTSTR msg = NULL;
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL
+		);
+		MessageBox(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
+		if (msg) { LocalFree(msg); }
 	}
-	else
-	{
-		MessageBox(GetForegroundWindow(), L"Unknown error", APP_TITLE, MB_ICONERROR);
-	}
-	ExitProcess(code);
+	return code;
 }
 
-bool IsElevated()
-{
-	HANDLE token = NULL;
-	TOKEN_ELEVATION info;
-	DWORD outsize = 0;
-	WinApiAssert(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token));
-	WinApiAssert(GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize));
-	CloseHandle(token);
-	return info.TokenIsElevated != 0;
-}
-
-int Main()
+__forceinline int Main()
 {
 	WCHAR* cmdln = GetCommandLine();
-	WCHAR* src;
-	WCHAR* dst;
 
-	// Skip current program name and spaces after
+	// Skip current program name.
+
 	bool quote = false;
 	while (*cmdln)
 	{
@@ -54,11 +37,12 @@ int Main()
 	}
 	while (*cmdln == ' ') cmdln++;
 
+	// Change current directory if asked.
+
 	if (*cmdln == '@')
 	{
-		// Read current directory from command line
 		WCHAR currdir[MAX_PATH];
-		dst = currdir;
+		WCHAR* dst = currdir;
 		cmdln++;
 		quote = false;
 		while (*cmdln)
@@ -71,25 +55,37 @@ int Main()
 		*dst = NULL;
 		while (*cmdln == ' ') cmdln++;
 
-		WinApiAssert(SetCurrentDirectory(currdir));
+		if (!SetCurrentDirectory(currdir)) { return ShowLastError(); }
 	}
 
-	if (!IsElevated())
+	// Check if SU is elevated.
+
+	bool is_elevated = false;
+
 	{
-		// Prepare new command line
-		WCHAR args[4096] = {'@', '"'};
-		dst = args + 2;
+		HANDLE token = NULL;
+		TOKEN_ELEVATION info = {};
+		DWORD outsize = 0;
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) { return ShowLastError(); }
+		defer [&] { CloseHandle(token); };
+		if (!GetTokenInformation(token, TokenElevation, &info, sizeof(TOKEN_ELEVATION), &outsize)) { return ShowLastError(); }
+		is_elevated = (bool) info.TokenIsElevated;
+	}
+
+	if (!is_elevated)
+	{
+		// Pass current directory and command to an elevated instance of SU.
+
+		WCHAR args[4096];
+		WCHAR* dst = args;
+		*(dst++) = '@'; *(dst++) = '"';
 		dst += GetCurrentDirectory(MAX_PATH, dst);
 		*(dst++) = '"'; *(dst++) = ' ';
-		src = cmdln;
+		WCHAR* src = cmdln;
 		while (*src) *(dst++) = *(src++);
 		*dst = NULL;
 
-		// Run itself with elevated permissions
-		SHELLEXECUTEINFO ei;
-		ZeroMemory(&ei, sizeof(ei));
-		ei.cbSize = sizeof(SHELLEXECUTEINFO);
-		ei.nShow = SW_SHOWNORMAL;
+		SHELLEXECUTEINFO ei = { .cbSize = sizeof(SHELLEXECUTEINFO), .nShow = SW_SHOWNORMAL };
 
 		WCHAR itself[MAX_PATH];
 		GetModuleFileName(NULL, itself, MAX_PATH);
@@ -97,34 +93,26 @@ int Main()
 		ei.lpVerb = L"runas";
 		ei.lpParameters = args;
 
-		if (!ShellExecuteEx(&ei))
-		{
-			DWORD code = GetLastError();
-			if (code != ERROR_CANCELLED) DieBox();
-			return code;
-		}
-		return 0;
+		if (!ShellExecuteEx(&ei)) { return ShowLastError(); }
 	}
 	else
 	{
-		// Start the destination process
-		STARTUPINFO si;
-		PROCESS_INFORMATION pi;
-		ZeroMemory(&si, sizeof(si));
-		si.cb = sizeof(si);
-		ZeroMemory(&pi, sizeof(pi));
+		// Execute the command.
 
-		// Set console title
+		STARTUPINFO si = { .cb = sizeof(STARTUPINFO) };
+		PROCESS_INFORMATION pi = {};
+
+		// CreateProcess requires lpCommandLine to be writable, so the default command is constructed on stack.
 		WCHAR defcmd[] = L"cmd";
-		if (!*cmdln) cmdln = defcmd;
+		if (!*cmdln) { cmdln = defcmd; }
 		si.lpTitle = cmdln;
 
-		// Start the child process.
-		WinApiAssert(CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi));
+		if (!CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return ShowLastError(); }
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
-		return 0;
 	}
+
+	return 0;
 }
 
 void Start()

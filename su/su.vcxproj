@@ -80,6 +80,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="su.rc.h" />
+    <ClInclude Include="defer.hpp" />
+    <ClInclude Include="windows.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="su.rc" />
