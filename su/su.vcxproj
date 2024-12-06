@@ -73,9 +73,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="intrin.cpp">
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-    </ClCompile>
     <ClCompile Include="su.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -85,6 +82,11 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="su.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\intrin\intrin.vcxproj">
+      <Project>{5f05ef5d-d4b2-4936-99cc-cdc1a91477fe}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
