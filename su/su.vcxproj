@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalOptions>/Gs16384 /Zc:alignedNew- /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:alignedNew- /Zc:sizedDealloc- %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
       <OmitDefaultLibName>true</OmitDefaultLibName>
     </ClCompile>

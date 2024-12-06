@@ -34,7 +34,7 @@ __forceinline int Main()
 		{
 			if (*cmdln == '"') { quote = !quote; }
 			else if (!quote && *cmdln == ' ') { break; }
-			else if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
+			else if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
 			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
@@ -58,20 +58,26 @@ __forceinline int Main()
 		is_elevated = (bool) info.TokenIsElevated;
 	}
 
+	HANDLE heap = GetProcessHeap();
+
 	if (!is_elevated)
 	{
 		// Pass current directory and command to an elevated instance of SU.
 
-		WCHAR args[4096];
+		WCHAR* args = (WCHAR*) HeapAlloc(heap, NULL, sizeof(WCHAR) * 32767);
+		if (!args) { return ERROR_NOT_ENOUGH_MEMORY; }
+		defer [&] { HeapFree(heap, NULL, args); };
+
 		WCHAR* dst = args;
-		WCHAR* end = args + ARRAYSIZE(args) - 1;
+		WCHAR* end = args + 32767 - 1;
+
 		*(dst++) = '@'; *(dst++) = '"';
 		dst += GetCurrentDirectory(MAX_PATH, dst);
 		*(dst++) = '"'; *(dst++) = ' ';
 		WCHAR* src = cmdln;
 		while (*src)
 		{
-			if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
+			if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
 			*(dst++) = *(src++);
 		}
 		*dst = NULL;
