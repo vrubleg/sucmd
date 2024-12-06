@@ -31,11 +31,11 @@ __forceinline int Main()
 	bool quote = false;
 	while (*cmdln)
 	{
-		if (*cmdln == '"') quote = !quote;
-		if (!quote && *cmdln == ' ') break;
+		if (*cmdln == '"') { quote = !quote; }
+		else if (!quote && *cmdln == ' ') { break; }
 		cmdln++;
 	}
-	while (*cmdln == ' ') cmdln++;
+	while (*cmdln == ' ') { cmdln++; }
 
 	// Change current directory if asked.
 
@@ -43,17 +43,19 @@ __forceinline int Main()
 	{
 		WCHAR currdir[MAX_PATH];
 		WCHAR* dst = currdir;
+		WCHAR* end = currdir + ARRAYSIZE(currdir) - 1;
 		cmdln++;
 		quote = false;
 		while (*cmdln)
 		{
-			if (*cmdln == '"') quote = !quote;
-			if (!quote && *cmdln == ' ') break;
-			if (*cmdln != '"') *(dst++) = *(cmdln);
+			if (*cmdln == '"') { quote = !quote; }
+			else if (!quote && *cmdln == ' ') { break; }
+			else if (dst >= end) { SetLastError(ERROR_BUFFER_OVERFLOW); return ShowLastError(); }
+			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
 		*dst = NULL;
-		while (*cmdln == ' ') cmdln++;
+		while (*cmdln == ' ') { cmdln++; }
 
 		if (!SetCurrentDirectory(currdir)) { return ShowLastError(); }
 	}
@@ -78,11 +80,16 @@ __forceinline int Main()
 
 		WCHAR args[4096];
 		WCHAR* dst = args;
+		WCHAR* end = args + ARRAYSIZE(args) - 1;
 		*(dst++) = '@'; *(dst++) = '"';
 		dst += GetCurrentDirectory(MAX_PATH, dst);
 		*(dst++) = '"'; *(dst++) = ' ';
 		WCHAR* src = cmdln;
-		while (*src) *(dst++) = *(src++);
+		while (*src)
+		{
+			if (dst >= end) { SetLastError(ERROR_BUFFER_OVERFLOW); return ShowLastError(); }
+			*(dst++) = *(src++);
+		}
 		*dst = NULL;
 
 		SHELLEXECUTEINFO ei = { .cbSize = sizeof(SHELLEXECUTEINFO), .nShow = SW_SHOWNORMAL };
