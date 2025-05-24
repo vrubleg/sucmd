@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Release" />
+    <Platform Name="ARM64" />
+    <Platform Name="Win32" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="common/common.vcxitems" Id="e521614c-3a17-4859-839e-9d85cd9529ea" />
+  <Project Path="su/su.vcxproj" Id="a20a9427-83fe-45ff-8d61-50c47f4d6b5c" />
+</Solution>
