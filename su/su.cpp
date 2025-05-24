@@ -3,8 +3,8 @@
 // (C) 2013-2024 Evgeny Vrublevsky <me@veg.by>
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "windows.hpp"
-#include "defer.hpp"
+import "windows.hpp";
+import "defer.hpp";
 
 __forceinline int Main()
 {
