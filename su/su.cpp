@@ -8,7 +8,17 @@ import "defer.hpp";
 
 __forceinline int Main()
 {
-	WCHAR* cmdln = GetCommandLine();
+	// Prepare a WCHAR buffer.
+
+	HANDLE heap = GetProcessHeap();
+	WCHAR* buf = (WCHAR*) HeapAlloc(heap, NULL, sizeof(WCHAR) * 32767);
+	if (!buf) { return ERROR_NOT_ENOUGH_MEMORY; }
+	defer [&] { HeapFree(heap, NULL, buf); };
+	WCHAR* end = buf + 32767 - 1;
+
+	// Parse command line.
+
+	WCHAR* cmdln = GetCommandLineW();
 
 	// Skip current program name.
 
@@ -25,9 +35,8 @@ __forceinline int Main()
 
 	if (*cmdln == '@')
 	{
-		WCHAR currdir[MAX_PATH];
-		WCHAR* dst = currdir;
-		WCHAR* end = currdir + ARRAYSIZE(currdir) - 1;
+		WCHAR* dst = buf;
+
 		cmdln++;
 		quote = false;
 		while (*cmdln)
@@ -41,7 +50,7 @@ __forceinline int Main()
 		*dst = NULL;
 		while (*cmdln == ' ' || *cmdln == '\t') { cmdln++; }
 
-		if (!SetCurrentDirectory(currdir)) { return GetLastError(); }
+		if (!SetCurrentDirectoryW(buf)) { return GetLastError(); }
 	}
 
 	// Check if SU is elevated.
@@ -58,21 +67,14 @@ __forceinline int Main()
 		is_elevated = (bool) info.TokenIsElevated;
 	}
 
-	HANDLE heap = GetProcessHeap();
-
 	if (!is_elevated)
 	{
 		// Pass current directory and command to an elevated instance of SU.
 
-		WCHAR* args = (WCHAR*) HeapAlloc(heap, NULL, sizeof(WCHAR) * 32767);
-		if (!args) { return ERROR_NOT_ENOUGH_MEMORY; }
-		defer [&] { HeapFree(heap, NULL, args); };
-
-		WCHAR* dst = args;
-		WCHAR* end = args + 32767 - 1;
+		WCHAR* dst = buf;
 
 		*(dst++) = '@'; *(dst++) = '"';
-		dst += GetCurrentDirectory(MAX_PATH, dst);
+		dst += GetCurrentDirectoryW(MAX_PATH, dst);
 		*(dst++) = '"'; *(dst++) = ' ';
 		WCHAR* src = cmdln;
 		while (*src)
@@ -85,12 +87,12 @@ __forceinline int Main()
 		SHELLEXECUTEINFO ei = { .cbSize = sizeof(SHELLEXECUTEINFO), .nShow = SW_SHOWNORMAL };
 
 		WCHAR itself[MAX_PATH];
-		GetModuleFileName(NULL, itself, MAX_PATH);
+		GetModuleFileNameW(NULL, itself, MAX_PATH);
 		ei.lpFile = itself;
 		ei.lpVerb = L"runas";
-		ei.lpParameters = args;
+		ei.lpParameters = buf;
 
-		if (!ShellExecuteEx(&ei)) { return GetLastError(); }
+		if (!ShellExecuteExW(&ei)) { return GetLastError(); }
 	}
 	else
 	{
@@ -104,7 +106,7 @@ __forceinline int Main()
 		if (!*cmdln) { cmdln = defcmd; }
 		si.lpTitle = cmdln;
 
-		if (!CreateProcess(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
+		if (!CreateProcessW(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 	}
@@ -119,11 +121,11 @@ void Start()
 	if (error_code && error_code != ERROR_CANCELLED)
 	{
 		LPTSTR msg = NULL;
-		FormatMessage(
+		FormatMessageW(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msg, 0, NULL
 		);
-		MessageBox(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
+		MessageBoxW(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
 		if (msg) { LocalFree(msg); }
 	}
 
