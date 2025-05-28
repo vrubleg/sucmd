@@ -16,10 +16,10 @@ __forceinline int Main()
 	while (*cmdln)
 	{
 		if (*cmdln == '"') { quote = !quote; }
-		else if (!quote && *cmdln == ' ') { break; }
+		else if (!quote && (*cmdln == ' ' || *cmdln == '\t')) { break; }
 		cmdln++;
 	}
-	while (*cmdln == ' ') { cmdln++; }
+	while (*cmdln == ' ' || *cmdln == '\t') { cmdln++; }
 
 	// Change current directory if asked.
 
@@ -33,13 +33,13 @@ __forceinline int Main()
 		while (*cmdln)
 		{
 			if (*cmdln == '"') { quote = !quote; }
-			else if (!quote && *cmdln == ' ') { break; }
+			else if (!quote && (*cmdln == ' ' || *cmdln == '\t')) { break; }
 			else if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
 			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
 		*dst = NULL;
-		while (*cmdln == ' ') { cmdln++; }
+		while (*cmdln == ' ' || *cmdln == '\t') { cmdln++; }
 
 		if (!SetCurrentDirectory(currdir)) { return GetLastError(); }
 	}
