@@ -6,12 +6,23 @@
 import "windows.hpp";
 import "defer.hpp";
 
+__forceinline bool IsSpace(const WCHAR c)
+{
+	return (c == ' ' || c == '\t');
+}
+
+__forceinline bool IsSpaceOrEnd(const WCHAR c)
+{
+	return (c == ' ' || c == '\t' || c == 0);
+}
+
 __forceinline bool IsCmdBuiltin(const WCHAR* cmdln)
 {
 	// Null-separated table of CMD built-ins. An additional implicit null at the end serves as a terminator.
-	// Excluded commands: type, echo, ver, pause, set, dir, color, chcp (it's a .com file).
+	// Excluded commands: title, color, chcp (it's actually a .com file) - those could be SU flags in the future.
 
-	const char* tbl = "start\0md\0mkdir\0rd\0rmdir\0ren\0rename\0move\0del\0erase\0copy\0date\0time\0assoc\0ftype\0";
+	const char* tbl = "start\0md\0mkdir\0rd\0rmdir\0ren\0rename\0move\0del\0erase\0copy\0date\0time\0assoc\0ftype\0"
+		"type\0echo\0ver\0pause\0set\0dir\0";
 
 	while (*tbl)
 	{
@@ -139,6 +150,18 @@ __forceinline int Main()
 		STARTUPINFO si = { .cb = sizeof(STARTUPINFO) };
 		PROCESS_INFORMATION pi = {};
 
+		// Detect /P flag (case insensitive).
+
+		bool has_pause_flag = false;
+
+		// This bit magic makes both -p and /P syntaxes supported.
+		if ((cmdln[0] | 0b00000010) == '/' && (cmdln[1] | 0b00100000) == 'p' && IsSpaceOrEnd(cmdln[2]))
+		{
+			has_pause_flag = true;
+			cmdln += 2;
+			while (IsSpace(cmdln[0])) { cmdln++; }
+		}
+
 		// Use "cmd" by default. Set title.
 
 		if (!*cmdln) { cmdln = L"cmd"; }
@@ -148,7 +171,7 @@ __forceinline int Main()
 
 		WCHAR* dst = buf;
 
-		if (IsCmdBuiltin(cmdln))
+		if (has_pause_flag || IsCmdBuiltin(cmdln))
 		{
 			// Run CMD built-ins with CMD.
 
@@ -175,6 +198,15 @@ __forceinline int Main()
 
 				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
 				*(dst++) = *(src++);
+			}
+
+			if (has_pause_flag)
+			{
+				for (const CHAR* src = " & pause"; *src; )
+				{
+					if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+					*(dst++) = *(src++);
+				}
 			}
 
 			*dst = NULL;
