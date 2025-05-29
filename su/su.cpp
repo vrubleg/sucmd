@@ -11,7 +11,7 @@ __forceinline bool IsSpace(const WCHAR c)
 	return (c == ' ' || c == '\t');
 }
 
-__forceinline bool IsSpaceOrEnd(const WCHAR c)
+__forceinline bool IsSpaceOrNull(const WCHAR c)
 {
 	return (c == ' ' || c == '\t' || c == 0);
 }
@@ -38,7 +38,7 @@ __forceinline bool IsCmdBuiltin(const WCHAR* cmdln)
 
 		// Is it a full match?
 
-		if (*tbl == 0 && (*cmd == 0 || *cmd == ' ' || *cmd == '\t'))
+		if (*tbl == 0 && IsSpaceOrNull(*cmd))
 		{
 			return true;
 		}
@@ -72,10 +72,10 @@ __forceinline UINT Main()
 	while (*cmdln)
 	{
 		if (*cmdln == '"') { quote = !quote; }
-		else if (!quote && (*cmdln == ' ' || *cmdln == '\t')) { break; }
+		else if (!quote && IsSpace(*cmdln)) { break; }
 		cmdln++;
 	}
-	while (*cmdln == ' ' || *cmdln == '\t') { cmdln++; }
+	while (IsSpace(*cmdln)) { cmdln++; }
 
 	// Change current directory if asked.
 
@@ -88,13 +88,13 @@ __forceinline UINT Main()
 		while (*cmdln)
 		{
 			if (*cmdln == '"') { quote = !quote; }
-			else if (!quote && (*cmdln == ' ' || *cmdln == '\t')) { break; }
+			else if (!quote && IsSpace(*cmdln)) { break; }
 			else if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
 			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
 		*dst = NULL;
-		while (*cmdln == ' ' || *cmdln == '\t') { cmdln++; }
+		while (IsSpace(*cmdln)) { cmdln++; }
 
 		if (!SetCurrentDirectoryW(buf)) { return GetLastError(); }
 	}
@@ -181,7 +181,7 @@ __forceinline UINT Main()
 		bool has_wait_flag = false;
 
 		// This bit magic makes both '-' and '/' accepted.
-		while ((cmdln[0] | 0b00000010) == '/' && IsSpaceOrEnd(cmdln[2]))
+		while ((cmdln[0] | 0b00000010) == '/' && IsSpaceOrNull(cmdln[2]))
 		{
 			// Detect /P flag (case insensitive).
 			if ((cmdln[1] | 0b00100000) == 'p')
