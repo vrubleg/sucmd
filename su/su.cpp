@@ -139,7 +139,11 @@ __forceinline UINT Main()
 
 		SHELLEXECUTEINFO ei = {
 			.cbSize = sizeof(SHELLEXECUTEINFO),
+#ifdef _CONSOLE
 			.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI,
+#else
+			.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI,
+#endif
 			.lpVerb = L"runas",
 			.lpFile = itself,
 			.lpParameters = buf,
@@ -150,6 +154,8 @@ __forceinline UINT Main()
 		{
 			return GetLastError();
 		}
+
+#ifdef _CONSOLE
 
 		// Wait until the elevated SU exits.
 
@@ -169,6 +175,8 @@ __forceinline UINT Main()
 			}
 		}
 
+#endif
+
 		return 0;
 	}
 	else
@@ -181,7 +189,10 @@ __forceinline UINT Main()
 		// Detect flags.
 
 		bool has_pause_flag = false;
+
+#ifdef _CONSOLE
 		bool has_wait_flag = false;
+#endif
 
 		// This bit magic makes both '-' and '/' accepted.
 		while ((cmdln[0] | 0b00000010) == '/' && IsSpaceOrNull(cmdln[2]))
@@ -191,20 +202,21 @@ __forceinline UINT Main()
 			{
 				has_pause_flag = true;
 				cmdln += 2;
-				while (IsSpace(cmdln[0])) { cmdln++; }
-				continue;
 			}
-
+#ifdef _CONSOLE
 			// Detect /W flag (case insensitive).
-			if ((cmdln[1] | 0b00100000) == 'w')
+			else if ((cmdln[1] | 0b00100000) == 'w')
 			{
 				has_wait_flag = true;
 				cmdln += 2;
-				while (IsSpace(cmdln[0])) { cmdln++; }
-				continue;
+			}
+#endif
+			else
+			{
+				break;
 			}
 
-			break;
+			while (IsSpace(cmdln[0])) { cmdln++; }
 		}
 
 		// Use "cmd" by default. Set title.
@@ -279,6 +291,8 @@ __forceinline UINT Main()
 			CloseHandle(pi.hThread);
 		};
 
+#ifdef _CONSOLE
+
 		// Wait until the process exits.
 
 		if (has_wait_flag)
@@ -295,6 +309,8 @@ __forceinline UINT Main()
 			}
 		}
 
+#endif
+
 		return 0;
 	}
 }
@@ -302,6 +318,8 @@ __forceinline UINT Main()
 void Start()
 {
 	DWORD error_code = Main();
+
+#ifndef _CONSOLE
 
 	if (error_code && error_code != ERROR_CANCELLED)
 	{
@@ -313,6 +331,8 @@ void Start()
 		MessageBoxW(GetForegroundWindow(), msg ? msg : L"Unknown error.", L"Super User", MB_ICONERROR);
 		if (msg) { LocalFree(msg); }
 	}
+
+#endif
 
 	ExitProcess(error_code);
 }
