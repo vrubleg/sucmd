@@ -52,7 +52,7 @@ __forceinline bool IsCmdBuiltin(const WCHAR* cmdln)
 	return false;
 }
 
-__forceinline int Main()
+__forceinline UINT Main()
 {
 	// Prepare a WCHAR buffer.
 
@@ -131,15 +131,40 @@ __forceinline int Main()
 		}
 		*dst = NULL;
 
-		SHELLEXECUTEINFO ei = { .cbSize = sizeof(SHELLEXECUTEINFO), .nShow = SW_SHOWNORMAL };
-
 		WCHAR itself[MAX_PATH];
-		GetModuleFileNameW(NULL, itself, MAX_PATH);
-		ei.lpFile = itself;
-		ei.lpVerb = L"runas";
-		ei.lpParameters = buf;
+		if (!GetModuleFileNameW(NULL, itself, MAX_PATH)) { return GetLastError(); }
 
-		if (!ShellExecuteExW(&ei)) { return GetLastError(); }
+		SHELLEXECUTEINFO ei = {
+			.cbSize = sizeof(SHELLEXECUTEINFO),
+			.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI,
+			.lpVerb = L"runas",
+			.lpFile = itself,
+			.lpParameters = buf,
+			.nShow = SW_SHOWNORMAL,
+		};
+
+		if (!ShellExecuteExW(&ei))
+		{
+			return GetLastError();
+		}
+
+		// Wait until the elevated SU exits.
+
+		if (ei.hProcess)
+		{
+			defer [&] { CloseHandle(ei.hProcess); };
+
+			WaitForSingleObject(ei.hProcess, INFINITE);
+
+			if (DWORD exit_code = 0; GetExitCodeProcess(ei.hProcess, &exit_code))
+			{
+				return exit_code;
+			}
+			else
+			{
+				return GetLastError();
+			}
+		}
 
 		return 0;
 	}
@@ -150,16 +175,33 @@ __forceinline int Main()
 		STARTUPINFO si = { .cb = sizeof(STARTUPINFO) };
 		PROCESS_INFORMATION pi = {};
 
-		// Detect /P flag (case insensitive).
+		// Detect flags.
 
 		bool has_pause_flag = false;
+		bool has_wait_flag = false;
 
-		// This bit magic makes both -p and /P syntaxes supported.
-		if ((cmdln[0] | 0b00000010) == '/' && (cmdln[1] | 0b00100000) == 'p' && IsSpaceOrEnd(cmdln[2]))
+		// This bit magic makes both '-' and '/' accepted.
+		while ((cmdln[0] | 0b00000010) == '/' && IsSpaceOrEnd(cmdln[2]))
 		{
-			has_pause_flag = true;
-			cmdln += 2;
-			while (IsSpace(cmdln[0])) { cmdln++; }
+			// Detect /P flag (case insensitive).
+			if ((cmdln[1] | 0b00100000) == 'p')
+			{
+				has_pause_flag = true;
+				cmdln += 2;
+				while (IsSpace(cmdln[0])) { cmdln++; }
+				continue;
+			}
+
+			// Detect /W flag (case insensitive).
+			if ((cmdln[1] | 0b00100000) == 'w')
+			{
+				has_wait_flag = true;
+				cmdln += 2;
+				while (IsSpace(cmdln[0])) { cmdln++; }
+				continue;
+			}
+
+			break;
 		}
 
 		// Use "cmd" by default. Set title.
@@ -227,8 +269,28 @@ __forceinline int Main()
 
 		// Note: CreateProcessW requires lpCommandLine to be writable.
 		if (!CreateProcessW(NULL, buf, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
+
+		defer [&]
+		{
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+		};
+
+		// Wait until the process exits.
+
+		if (has_wait_flag)
+		{
+			WaitForSingleObject(pi.hProcess, INFINITE);
+
+			if (DWORD exit_code = 0; GetExitCodeProcess(pi.hProcess, &exit_code))
+			{
+				return exit_code;
+			}
+			else
+			{
+				return GetLastError();
+			}
+		}
 
 		return 0;
 	}
