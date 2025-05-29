@@ -6,6 +6,41 @@
 import "windows.hpp";
 import "defer.hpp";
 
+__forceinline bool IsCmdBuiltin(const WCHAR* cmdln)
+{
+	// Null-separated table of CMD built-ins. An additional implicit null at the end serves as a terminator.
+	// Excluded commands: type, echo, ver, pause, set, dir, color, chcp (it's a .com file).
+
+	const char* tbl = "start\0md\0mkdir\0rd\0rmdir\0ren\0rename\0move\0del\0erase\0copy\0date\0time\0assoc\0ftype\0";
+
+	while (*tbl)
+	{
+		const WCHAR* cmd = cmdln;
+
+		// Case-insensitive comparison.
+
+		while (*cmd && WCHAR(*cmd | 0b00100000) == WCHAR(*tbl))
+		{
+			cmd++;
+			tbl++;
+		}
+
+		// Is it a full match?
+
+		if (*tbl == 0 && (*cmd == 0 || *cmd == ' ' || *cmd == '\t'))
+		{
+			return true;
+		}
+
+		// No, go to the next command in the built-ins table.
+
+		while (*tbl) { tbl++; }
+		tbl++;
+	}
+
+	return false;
+}
+
 __forceinline int Main()
 {
 	// Prepare a WCHAR buffer.
@@ -18,7 +53,7 @@ __forceinline int Main()
 
 	// Parse command line.
 
-	WCHAR* cmdln = GetCommandLineW();
+	const WCHAR* cmdln = GetCommandLineW();
 
 	// Skip current program name.
 
@@ -76,7 +111,8 @@ __forceinline int Main()
 		*(dst++) = '@'; *(dst++) = '"';
 		dst += GetCurrentDirectoryW(MAX_PATH, dst);
 		*(dst++) = '"'; *(dst++) = ' ';
-		WCHAR* src = cmdln;
+
+		const WCHAR* src = cmdln;
 		while (*src)
 		{
 			if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
@@ -93,6 +129,8 @@ __forceinline int Main()
 		ei.lpParameters = buf;
 
 		if (!ShellExecuteExW(&ei)) { return GetLastError(); }
+
+		return 0;
 	}
 	else
 	{
@@ -101,17 +139,67 @@ __forceinline int Main()
 		STARTUPINFO si = { .cb = sizeof(STARTUPINFO) };
 		PROCESS_INFORMATION pi = {};
 
-		// CreateProcess requires lpCommandLine to be writable, so the default command is constructed on stack.
-		WCHAR defcmd[] = L"cmd";
-		if (!*cmdln) { cmdln = defcmd; }
-		si.lpTitle = cmdln;
+		// Use "cmd" by default. Set title.
 
-		if (!CreateProcessW(NULL, cmdln, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
+		if (!*cmdln) { cmdln = L"cmd"; }
+		si.lpTitle = (WCHAR*) cmdln;
+
+		// Prepare actual command for execution.
+
+		WCHAR* dst = buf;
+
+		if (IsCmdBuiltin(cmdln))
+		{
+			// Run CMD built-ins with CMD.
+
+			for (const CHAR* src = "cmd /D /C "; *src; )
+			{
+				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				*(dst++) = *(src++);
+			}
+
+			// Append escaped command.
+
+			quote = false;
+			for (const WCHAR* src = cmdln; *src; )
+			{
+				if (*src == '"')
+				{
+					quote = !quote;
+				}
+				else if (!quote && (*src == '&' || *src == '|' || *src == '<' || *src == '>' || *src == '^' || *src == '%'))
+				{
+					if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+					*(dst++) = '^';
+				}
+
+				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				*(dst++) = *(src++);
+			}
+
+			*dst = NULL;
+		}
+		else
+		{
+			// Run the command directly.
+
+			for (const WCHAR* src = cmdln; *src; )
+			{
+				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				*(dst++) = *(src++);
+			}
+
+			*dst = NULL;
+		}
+
+
+		// Note: CreateProcessW requires lpCommandLine to be writable.
+		if (!CreateProcessW(NULL, buf, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) { return GetLastError(); }
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
-	}
 
-	return 0;
+		return 0;
+	}
 }
 
 void Start()
