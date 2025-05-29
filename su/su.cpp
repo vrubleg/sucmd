@@ -89,7 +89,7 @@ __forceinline UINT Main()
 		{
 			if (*cmdln == '"') { quote = !quote; }
 			else if (!quote && IsSpace(*cmdln)) { break; }
-			else if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+			else if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 			else { *(dst++) = *(cmdln); }
 			cmdln++;
 		}
@@ -120,13 +120,16 @@ __forceinline UINT Main()
 		WCHAR* dst = buf;
 
 		*(dst++) = '@'; *(dst++) = '"';
-		dst += GetCurrentDirectoryW(MAX_PATH, dst);
+		DWORD count = GetCurrentDirectoryW(32767 - 4, dst);
+		if (!count) { return GetLastError(); }
+		if (count > (32767 - 4 - 1)) { return ERROR_BUFFER_OVERFLOW; }
+		dst += count;
 		*(dst++) = '"'; *(dst++) = ' ';
 
 		const WCHAR* src = cmdln;
 		while (*src)
 		{
-			if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+			if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 			*(dst++) = *(src++);
 		}
 		*dst = NULL;
@@ -219,7 +222,7 @@ __forceinline UINT Main()
 
 			for (const CHAR* src = "cmd /D /C "; *src; )
 			{
-				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 				*(dst++) = *(src++);
 			}
 
@@ -234,11 +237,11 @@ __forceinline UINT Main()
 				}
 				else if (!quote && (*src == '&' || *src == '|' || *src == '<' || *src == '>' || *src == '^' || *src == '%'))
 				{
-					if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+					if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 					*(dst++) = '^';
 				}
 
-				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 				*(dst++) = *(src++);
 			}
 
@@ -246,7 +249,7 @@ __forceinline UINT Main()
 			{
 				for (const CHAR* src = " & pause"; *src; )
 				{
-					if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+					if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 					*(dst++) = *(src++);
 				}
 			}
@@ -259,7 +262,7 @@ __forceinline UINT Main()
 
 			for (const WCHAR* src = cmdln; *src; )
 			{
-				if (dst >= end) { return ERROR_FILENAME_EXCED_RANGE; }
+				if (dst >= end) { return ERROR_BUFFER_OVERFLOW; }
 				*(dst++) = *(src++);
 			}
 
