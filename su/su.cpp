@@ -186,13 +186,12 @@ __forceinline UINT Main()
 		STARTUPINFO si = { .cb = sizeof(STARTUPINFO) };
 		PROCESS_INFORMATION pi = {};
 
+#ifdef _CONSOLE
+
 		// Detect flags.
 
 		bool has_pause_flag = false;
-
-#ifdef _CONSOLE
 		bool has_wait_flag = false;
-#endif
 
 		// This bit magic makes both '-' and '/' accepted.
 		while ((cmdln[0] | 0b00000010) == '/' && IsSpaceOrNull(cmdln[2]))
@@ -203,14 +202,12 @@ __forceinline UINT Main()
 				has_pause_flag = true;
 				cmdln += 2;
 			}
-#ifdef _CONSOLE
 			// Detect /W flag (case insensitive).
 			else if ((cmdln[1] | 0b00100000) == 'w')
 			{
 				has_wait_flag = true;
 				cmdln += 2;
 			}
-#endif
 			else
 			{
 				break;
@@ -218,6 +215,8 @@ __forceinline UINT Main()
 
 			while (IsSpace(cmdln[0])) { cmdln++; }
 		}
+
+#endif
 
 		// Use "cmd" by default. Set title.
 
@@ -228,7 +227,13 @@ __forceinline UINT Main()
 
 		WCHAR* dst = buf;
 
-		if (has_pause_flag || IsCmdBuiltin(cmdln))
+#ifdef _CONSOLE
+		bool run_via_cmd = has_pause_flag || IsCmdBuiltin(cmdln);
+#else
+		bool run_via_cmd = IsCmdBuiltin(cmdln);
+#endif
+
+		if (run_via_cmd)
 		{
 			// Run CMD built-ins with CMD.
 
@@ -257,6 +262,8 @@ __forceinline UINT Main()
 				*(dst++) = *(src++);
 			}
 
+#ifdef _CONSOLE
+
 			if (has_pause_flag)
 			{
 				for (const CHAR* src = " & pause"; *src; )
@@ -265,6 +272,8 @@ __forceinline UINT Main()
 					*(dst++) = *(src++);
 				}
 			}
+
+#endif
 
 			*dst = NULL;
 		}
