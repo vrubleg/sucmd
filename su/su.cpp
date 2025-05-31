@@ -19,10 +19,24 @@ __forceinline bool IsSpaceOrNull(const WCHAR c)
 __forceinline bool IsCmdBuiltin(const WCHAR* cmdln)
 {
 	// Null-separated table of CMD built-ins. An additional implicit null at the end serves as a terminator.
-	// Excluded commands: title, color, chcp (it's actually a .com file) - those could be SU flags in the future.
 
-	const char* tbl = "start\0md\0mkdir\0rd\0rmdir\0ren\0rename\0move\0del\0erase\0copy\0date\0time\0assoc\0ftype\0"
-		"type\0echo\0ver\0pause\0set\0dir\0";
+	const char* tbl =
+		"mklink\0"
+		"mkdir\0md\0"
+		"rmdir\0rd\0"
+		"del\0erase\0"
+		"rename\0ren\0"
+		"move\0copy\0"
+		"date\0time\0"
+		"assoc\0ftype\0"
+#ifdef _CONSOLE
+		"type\0"
+		"echo\0"
+		"ver\0"
+		"set\0"
+		"dir\0"
+#endif
+		"start\0";
 
 	while (*tbl)
 	{
