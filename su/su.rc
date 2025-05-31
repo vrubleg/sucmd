@@ -61,8 +61,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,2,2,0
- PRODUCTVERSION 1,2,2,0
+ FILEVERSION 1,2,3,0
+ PRODUCTVERSION 1,2,3,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -79,11 +79,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Vegalogic Software"
             VALUE "FileDescription", "Start an elevated cmd"
-            VALUE "FileVersion", "1.2.2.0"
-            VALUE "LegalCopyright", "2013-2024 Evgeny Vrublevsky <me@veg.by>"
+            VALUE "FileVersion", "1.2.3.0"
+            VALUE "LegalCopyright", "2013-2025 Evgeny Vrublevsky <me@veg.by>"
             VALUE "OriginalFilename", "su.exe"
             VALUE "ProductName", "Super User"
-            VALUE "ProductVersion", "1.2.2.0"
+            VALUE "ProductVersion", "1.2.3.0"
         END
     END
     BLOCK "VarFileInfo"
